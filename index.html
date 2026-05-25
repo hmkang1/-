@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>수주진척 현황 대시보드</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'맑은 고딕','Malgun Gothic',sans-serif;background:#F3F4F6;color:#374151;font-size:14px}
+.wrap{max-width:1200px;margin:0 auto;padding:24px}
+.hd{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid #E5E7EB}
+.hd h1{font-size:22px;font-weight:700;color:#1B2A4A}
+.hd p{font-size:13px;color:#6B7280;margin-top:4px}
+.badge{font-size:11px;padding:4px 12px;border-radius:6px;background:#FEF9C3;color:#92400E;font-weight:600}
+.wk-tabs{display:flex;gap:6px;margin-bottom:20px;flex-wrap:wrap}
+.wk-btn{font-size:12px;padding:5px 12px;border-radius:6px;border:1px solid #D1D5DB;background:#fff;cursor:pointer;color:#6B7280;font-family:inherit}
+.wk-btn.on{background:#1B2A4A;color:#fff;border-color:#1B2A4A;font-weight:600}
+.kpi-row{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:20px}
+.kpi{background:#fff;border-radius:10px;padding:14px 16px;border:1px solid #E5E7EB}
+.kpi p:first-child{font-size:11px;color:#9CA3AF;margin-bottom:6px;font-weight:600;letter-spacing:.05em}
+.kpi p:last-child{font-size:24px;font-weight:700;line-height:1}
+.kpi.danger p:last-child{color:#DC2626}
+.kpi.success p:last-child{color:#16A34A}
+.kpi.info p:last-child{color:#2563EB}
+.kpi.warn p:last-child{color:#D97706}
+.panels{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.panel{background:#fff;border-radius:10px;padding:16px 18px;border:1px solid #E5E7EB}
+.panel-t{font-size:13px;font-weight:700;color:#374151;margin-bottom:14px;display:flex;align-items:center;gap:6px}
+.full{grid-column:1/-1}
+.cust-list{list-style:none}
+.cust-item{display:flex;align-items:center;gap:8px;padding:6px 4px;border-bottom:1px solid #F3F4F6;cursor:pointer;border-radius:6px;transition:all .15s}
+.cust-item:hover{background:#F9FAFB;padding-left:8px}
+.cust-item.active{background:#EFF6FF;padding-left:8px}
+.cust-item.active .cn{color:#2563EB;font-weight:600}
+.cn{font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cr{font-size:12px;font-weight:700;min-width:32px;text-align:right}
+.cbar-w{width:60px;height:5px;background:#E5E7EB;border-radius:3px;overflow:hidden;flex-shrink:0}
+.cbar{height:5px;border-radius:3px}
+.drill{background:#fff;border-radius:10px;padding:16px 18px;border:1px solid #BFDBFE;margin-bottom:14px}
+.drill-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.drill-hd h3{font-size:15px;font-weight:700;color:#1B2A4A}
+.drill-close{font-size:12px;color:#6B7280;cursor:pointer;padding:4px 10px;border-radius:6px;border:1px solid #D1D5DB;background:#fff}
+.dkpi{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
+.item-row{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid #F3F4F6;font-size:12px}
+.item-row:last-child{border-bottom:none}
+.item-name{flex:1;min-width:0;font-weight:600;color:#1F2937;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item-sub{font-size:11px;color:#6B7280;margin-top:2px}
+.b{font-size:10px;padding:2px 8px;border-radius:5px;font-weight:600;white-space:nowrap;flex-shrink:0}
+.b-danger{background:#FEE2E2;color:#DC2626}
+.b-warn{background:#FEF3C7;color:#D97706}
+.b-info{background:#DBEAFE;color:#2563EB}
+.b-success{background:#DCFCE7;color:#16A34A}
+.add-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid #E5E7EB}
+.add-row input,.add-row select{padding:7px 10px;border:1px solid #D1D5DB;border-radius:6px;font-size:12px;font-family:inherit}
+.add-row button{padding:7px 16px;background:#1B2A4A;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit}
+.add-row button:hover{background:#2563EB}
+#add-msg{font-size:11px;margin-top:6px}
+footer{text-align:center;font-size:11px;color:#9CA3AF;margin-top:24px;padding-top:16px;border-top:1px solid #E5E7EB}
+@media(max-width:700px){.kpi-row{grid-template-columns:repeat(2,1fr)}.panels{grid-template-columns:1fr}.dkpi{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hd">
+    <div>
+      <h1>수주진척 현황 대시보드</h1>
+      <p id="period-label">5월 2주차 &nbsp;|&nbsp; 5/7 ~ 5/13</p>
+    </div>
+    
+  </div>
+
+  <div class="wk-tabs" id="wk-tabs"></div>
+  <div class="kpi-row" id="kpi-row"></div>
+
+  <div class="panels">
+    <div class="panel">
+      <p class="panel-t">📈 주차별 납기준수율 추이</p>
+      <div style="display:flex;gap:12px;margin-bottom:8px;font-size:11px;color:#6B7280">
+        <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#3B6D11;display:inline-block"></span>준수율</span>
+        <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:50%;background:#E24B4A;display:inline-block"></span>목표(85%)</span>
+      </div>
+      <div style="position:relative;width:100%;height:180px"><canvas id="trendC"></canvas></div>
+    </div>
+    <div class="panel">
+      <p class="panel-t">📊 미준수 사유 현황</p>
+      <div style="position:relative;width:100%;height:200px"><canvas id="reasonC"></canvas></div>
+    </div>
+  </div>
+
+  <div id="drill-section" style="display:none"></div>
+
+  <div class="panels">
+    <div class="panel">
+      <p class="panel-t">🏢 고객사별 준수율 <span style="font-size:10px;color:#9CA3AF;font-weight:400">클릭 → 상세보기</span></p>
+      <ul class="cust-list" id="cust-list"></ul>
+    </div>
+    <div class="panel">
+      <p class="panel-t">🔄 생산단계별 현황</p>
+      <div style="display:flex;gap:8px;margin-bottom:8px;font-size:11px;color:#6B7280;flex-wrap:wrap" id="stage-leg"></div>
+      <div style="position:relative;width:100%;height:180px"><canvas id="stageC"></canvas></div>
+    </div>
+  </div>
+
+  <div class="panel full">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+      <p class="panel-t" style="margin:0">➕ 주차 데이터 입력</p>
+      <span style="font-size:11px;color:#9CA3AF">입력 시 추이 차트 즉시 반영</span>
+    </div>
+    <div class="add-row">
+      <input type="text" id="inp-week" placeholder="주차명 (예: 5월3주차)" style="min-width:140px">
+      <input type="number" id="inp-total" placeholder="총 수주건" style="width:90px">
+      <input type="number" id="inp-ok" placeholder="준수건" style="width:80px">
+      <input type="number" id="inp-delay" placeholder="지연건" style="width:80px">
+      <button onclick="addWeek()">추가</button>
+    </div>
+    <p id="add-msg"></p>
+  </div>
+
+  <footer>공급계획팀 전략파트 &nbsp;|&nbsp; 수주진척 관리 시스템 &nbsp;|&nbsp; <span id="today"></span></footer>
+</div>
+
+<script>
+document.getElementById('today').textContent = new Date().toLocaleDateString('ko-KR');
+
+const weekData = [
+  {label:'3월1주',period:'3/3~3/7',  total:155,ok:112,delay:43,rate:72.3},
+  {label:'3월2주',period:'3/10~3/14',total:148,ok:100,delay:48,rate:67.6},
+  {label:'3월3주',period:'3/17~3/21',total:162,ok:120,delay:42,rate:74.1},
+  {label:'3월4주',period:'3/24~3/28',total:170,ok:121,delay:49,rate:71.2},
+  {label:'4월1주',period:'4/3~4/7',  total:158,ok:120,delay:38,rate:75.9},
+  {label:'4월2주',period:'4/7~4/11', total:164,ok:120,delay:44,rate:73.2},
+  {label:'4월3주',period:'4/14~4/18',total:171,ok:118,delay:53,rate:69.0},
+  {label:'4월4주',period:'4/21~4/25',total:180,ok:140,delay:40,rate:77.8},
+  {label:'5월1주',period:'4/28~5/2', total:169,ok:110,delay:59,rate:65.1},
+  {label:'5월2주',period:'5/7~5/13', total:176,ok:107,delay:69,rate:60.8},
+];
+const reasonsByWeek = {
+  '5월1주':  [['자급자재지연',22],['생산지연',14],['사급자재지연',10],['고객사요청',6],['원료지연',4],['단납기',3]],
+  '5월2주':  [['자급자재지연',28],['생산지연',15],['사급자재지연',8],['고객사요청',7],['원료지연',5],['단납기',2]],
+};
+const stageData = [
+  {name:'출고완료',count:62,color:'#3B6D11'},
+  {name:'생산중',count:38,color:'#378ADD'},
+  {name:'출고대기',count:21,color:'#1D9E75'},
+  {name:'원자재입고대기',count:18,color:'#BA7517'},
+  {name:'QC검사중',count:15,color:'#185FA5'},
+  {name:'생산의뢰',count:14,color:'#5F5E5A'},
+  {name:'홀딩',count:8,color:'#A32D2D'},
+];
+const custData = [
+  {name:'PEACH AND LILY',total:6,ok:0,rate:0,items:[
+    {item:'Glass Skin Ginseng Collagen Mask',qty:108000,reason:'생산지연',action:'영업 납기 협의중',status:'위험'},
+    {item:'Advanced Rebound Bioglow Cream 5mL',qty:98640,reason:'벌크이슈',action:'파샬출고 협의완료',status:'주의'},
+    {item:'Advanced Rebound Bioglow Cream 50mL',qty:67392,reason:'자급자재지연',action:'5/13~15 입고예정',status:'주의'},
+    {item:'Miniprotein Exosome Bioactive Ampoule',qty:51840,reason:'원료지연',action:'원료 입고 지연중',status:'위험'},
+  ]},
+  {name:'크레이버코퍼레이션',total:13,ok:6,rate:46,items:[
+    {item:'스킨1004 센텔라 워터겔시트 앰플 마스크',qty:250000,reason:'자급자재지연',action:'부업 입고 지연',status:'위험'},
+    {item:'스킨1004 센텔라 프로바이오시카 마스크',qty:36000,reason:'자급자재지연',action:'부업 입고 지연',status:'주의'},
+    {item:'스킨1004 센텔라 워터겔시트 앰플 5ea EU',qty:27000,reason:'자급자재지연',action:'부업 입고 지연',status:'주의'},
+  ]},
+  {name:'아모레퍼시픽',total:8,ok:4,rate:50,items:[
+    {item:'프리메라 피디알엔 나이아-10 겔 마스크',qty:140000,reason:'원료지연',action:'원료 미투입 5/12 결정',status:'위험'},
+    {item:'프리메라 비타 글루타치온 기미 앰플 겔마스크',qty:31731,reason:'고객사요청',action:'생산홀딩 후 일정수립중',status:'주의'},
+  ]},
+  {name:'얼트루',total:6,ok:1,rate:17,items:[
+    {item:'아임쏘리 포 마이 스킨 브라이트닝 아이패치',qty:200000,reason:'고객사요청',action:'납기일 협의중',status:'주의'},
+    {item:'아임쏘리 포 마이 스킨 하이드로겔 아이패치',qty:20000,reason:'사급자재지연',action:'미입고',status:'위험'},
+  ]},
+  {name:'이니스프리',total:16,ok:13,rate:81,items:[
+    {item:'그린티에너지마스크 22ml',qty:30000,reason:'자급자재지연',action:'파우치 입고 지연',status:'주의'},
+    {item:'병풀에너지마스크 22ml',qty:20000,reason:'자급자재지연',action:'부업지연',status:'주의'},
+  ]},
+];
+
+let selWeekIdx = weekData.length - 1, selCust = null;
+let trendChart, reasonChart, stageChart;
+
+function renderTabs(){
+  document.getElementById('wk-tabs').innerHTML = weekData.map((w,i)=>
+    `<button class="wk-btn ${i===selWeekIdx?'on':''}" onclick="selWeek(${i})">${w.label}</button>`
+  ).join('');
+}
+function renderKpi(){
+  const w = weekData[selWeekIdx];
+  const prev = selWeekIdx>0?weekData[selWeekIdx-1]:null;
+  const diff = prev?(w.rate-prev.rate).toFixed(1):null;
+  const diffStr = diff!==null?(diff>=0?'+'+diff+'%p':diff+'%p'):'-';
+  const diffCls = diff!==null?(diff>=0?'success':'danger'):'';
+  document.getElementById('period-label').textContent = `${w.label} | ${w.period}`;
+  document.getElementById('kpi-row').innerHTML = `
+    <div class="kpi"><p>총 수주건</p><p>${w.total}</p></div>
+    <div class="kpi success"><p>납기 준수</p><p>${w.ok}</p></div>
+    <div class="kpi danger"><p>납기 지연</p><p>${w.delay}</p></div>
+    <div class="kpi info"><p>납기 준수율</p><p>${w.rate.toFixed(1)}%</p></div>
+    <div class="kpi ${diffCls}"><p>전주 대비</p><p>${diffStr}</p></div>
+    <div class="kpi warn"><p>목표 달성률</p><p>${Math.round(w.rate/85*100)}%</p></div>`;
+}
+function renderTrend(){
+  const ctx = document.getElementById('trendC');
+  if(trendChart) trendChart.destroy();
+  trendChart = new Chart(ctx,{type:'line',data:{
+    labels:weekData.map(w=>w.label),
+    datasets:[
+      {label:'준수율',data:weekData.map(w=>w.rate),borderColor:'#3B6D11',backgroundColor:'rgba(59,109,17,0.07)',
+       tension:0.35,fill:true,pointBackgroundColor:weekData.map(w=>w.rate<70?'#E24B4A':w.rate<80?'#BA7517':'#3B6D11'),pointRadius:4},
+      {label:'목표',data:Array(weekData.length).fill(85),borderColor:'#E24B4A',borderDash:[5,4],borderWidth:1.5,pointRadius:0,fill:false}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.y.toFixed(1)}%`}}},
+      scales:{x:{grid:{display:false},ticks:{font:{size:9},color:'#9CA3AF',autoSkip:false,maxRotation:40}},
+              y:{min:50,max:100,grid:{color:'#F3F4F6'},ticks:{font:{size:10},color:'#9CA3AF',callback:v=>v+'%'}}}}});
+}
+function renderReason(){
+  const w = weekData[selWeekIdx];
+  const reasons = reasonsByWeek[w.label]||[['자급자재지연',20],['생산지연',12],['사급자재지연',7],['고객사요청',5],['원료지연',4],['단납기',2]];
+  const ctx = document.getElementById('reasonC');
+  if(reasonChart) reasonChart.destroy();
+  reasonChart = new Chart(ctx,{type:'bar',data:{
+    labels:reasons.map(r=>r[0]),
+    datasets:[{label:'건수',data:reasons.map(r=>r[1]),backgroundColor:['#378ADD','#3B6D11','#BA7517','#185FA5','#A32D2D','#5F5E5A'],borderRadius:4,borderSkipped:false}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.x}건`}}},
+      scales:{x:{grid:{color:'#F3F4F6'},ticks:{color:'#9CA3AF',font:{size:10}}},
+              y:{grid:{display:false},ticks:{color:'#6B7280',font:{size:10}}}}}});
+}
+function renderStage(){
+  const ctx = document.getElementById('stageC');
+  if(stageChart) stageChart.destroy();
+  const leg = document.getElementById('stage-leg');
+  leg.innerHTML = stageData.map(d=>`<span style="display:flex;align-items:center;gap:3px"><span style="width:9px;height:9px;border-radius:2px;background:${d.color};display:inline-block"></span>${d.name} ${d.count}</span>`).join('');
+  stageChart = new Chart(ctx,{type:'doughnut',data:{
+    labels:stageData.map(d=>d.name),
+    datasets:[{data:stageData.map(d=>d.count),backgroundColor:stageData.map(d=>d.color),borderWidth:2,borderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'60%',
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${ctx.parsed}건`}}}}});
+}
+function renderCustList(){
+  const ul = document.getElementById('cust-list');
+  ul.innerHTML = custData.map((c,i)=>{
+    const rc = c.rate>=80?'#3B6D11':c.rate>=50?'#BA7517':'#E24B4A';
+    return `<li class="cust-item ${selCust===i?'active':''}" onclick="toggleDrill(${i})">
+      <span class="cn">${c.name}</span>
+      <div class="cbar-w"><div class="cbar" style="width:${c.rate}%;background:${rc}"></div></div>
+      <span class="cr" style="color:${rc}">${c.rate}%</span>
+      <span style="font-size:11px;color:#9CA3AF">${selCust===i?'▲':'▼'}</span>
+    </li>`;
+  }).join('');
+}
+function toggleDrill(idx){selCust=selCust===idx?null:idx;renderCustList();renderDrill();}
+function renderDrill(){
+  const el = document.getElementById('drill-section');
+  if(selCust===null){el.style.display='none';el.innerHTML='';return;}
+  const c = custData[selCust];
+  const sb = s=>s==='위험'?'b-danger':s==='주의'?'b-warn':'b-success';
+  const totalQty = c.items.reduce((a,b)=>a+b.qty,0);
+  el.style.display='block';
+  el.innerHTML=`<div class="drill">
+    <div class="drill-hd">
+      <h3>${c.name} — 지연 상세</h3>
+      <button class="drill-close" onclick="toggleDrill(${selCust})">닫기 ✕</button>
+    </div>
+    <div class="dkpi">
+      <div class="kpi"><p>수주건수</p><p style="font-size:18px">${c.total}</p></div>
+      <div class="kpi success"><p>납기준수</p><p style="font-size:18px">${c.ok}</p></div>
+      <div class="kpi danger"><p>지연건수</p><p style="font-size:18px">${c.items.length}</p></div>
+      <div class="kpi info"><p>준수율</p><p style="font-size:18px">${c.rate}%</p></div>
+    </div>
+    ${c.items.map(it=>`<div class="item-row">
+      <div style="flex:1;min-width:0">
+        <p class="item-name">${it.item}</p>
+        <p class="item-sub">${it.qty.toLocaleString()}매 | ${it.action}</p>
+      </div>
+      <span class="b b-info">${it.reason}</span>
+      <span class="b ${sb(it.status)}">${it.status}</span>
+    </div>`).join('')}
+    <div style="margin-top:10px;padding-top:8px;border-top:1px solid #F3F4F6;font-size:11px;color:#6B7280;display:flex;gap:16px">
+      <span>지연 총 낱매수량: <strong style="color:#1F2937">${totalQty.toLocaleString()}매</strong></span>
+      <span>위험건: <strong style="color:#DC2626">${c.items.filter(i=>i.status==='위험').length}건</strong></span>
+    </div>
+  </div>`;
+}
+function selWeek(i){selWeekIdx=i;selCust=null;renderAll();}
+function renderAll(){renderTabs();renderKpi();renderTrend();renderReason();renderStage();renderCustList();renderDrill();}
+function addWeek(){
+  const week=document.getElementById('inp-week').value.trim();
+  const total=parseInt(document.getElementById('inp-total').value);
+  const ok=parseInt(document.getElementById('inp-ok').value);
+  const delay=parseInt(document.getElementById('inp-delay').value);
+  const msg=document.getElementById('add-msg');
+  if(!week||isNaN(total)||isNaN(ok)){msg.style.color='#DC2626';msg.textContent='주차명, 총 수주건, 준수건은 필수입니다.';return;}
+  const rate=Math.round(ok/total*1000)/10;
+  weekData.push({label:week,period:'-',total,ok,delay:isNaN(delay)?total-ok:delay,rate});
+  selWeekIdx=weekData.length-1;
+  ['inp-week','inp-total','inp-ok','inp-delay'].forEach(id=>document.getElementById(id).value='');
+  msg.style.color='#16A34A';msg.textContent=`${week} 추가 완료. 준수율 ${rate}%`;
+  renderAll();
+}
+renderAll();
+</script>
+</body>
+</html>
